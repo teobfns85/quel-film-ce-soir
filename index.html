@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090909">
+<title>Quel film ce soir ?</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090909;color:#fff;font-family:Arial,sans-serif}
+header{padding:18px;background:#17120b;border-bottom:1px solid #c59a48;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.logo{font-weight:bold;color:#f4cb77;font-size:20px}
+button,input{padding:11px;border-radius:10px;border:1px solid #574426;background:#191714;color:white}
+button{cursor:pointer}
+.gold{background:linear-gradient(135deg,#ffdf91,#bd8428);color:#171007;font-weight:bold;border:0}
+main{max-width:1100px;margin:auto;padding:18px}
+.hero{padding:35px 18px;border:1px solid #5c4522;border-radius:20px;background:radial-gradient(ellipse at top,#493015,#15110c 60%,#090909);text-align:center}
+h1{font-size:clamp(32px,7vw,52px);margin:12px 0}
+.goldtext{color:#f3c66b}
+p{line-height:1.5;color:#c8c1b4}
+.panel{margin-top:20px;padding:18px;background:#141414;border:1px solid #30291d;border-radius:16px}
+label{display:block;color:#f3c66b;margin:15px 0 9px;font-weight:bold}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip.active{background:#b78a3d;color:#120d05}
+input{width:100%}
+.search{display:flex;gap:8px;margin-top:12px}
+.search input{flex:1;min-width:0}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.movie{overflow:hidden;border:1px solid #393024;background:#151515;border-radius:14px}
+.poster{height:230px;background:#21180c;position:relative}
+.poster img{width:100%;height:100%;object-fit:cover}
+.score{position:absolute;top:8px;left:8px;background:#080808e8;color:#ffdb83;padding:6px;border-radius:7px;font-weight:bold}
+.heart{position:absolute;right:7px;top:7px;background:#111d;padding:7px}
+.info{padding:12px}
+.info h3{margin:0 0 7px;font-size:16px}
+.meta{font-size:12px;color:#d6b875}
+.summary{font-size:13px;min-height:65px}
+.info button{width:100%}
+.empty{padding:25px;text-align:center;color:#c8c1b4}
+footer{text-align:center;padding:25px;color:#888;font-size:12px}
+.modal{display:none;position:fixed;inset:0;background:#000e;z-index:5;align-items:center;justify-content:center;padding:16px}
+.modal.show{display:flex}
+.dialog{max-width:600px;width:100%;max-height:90vh;overflow:auto;background:#171510;border:1px solid #b58b3c;border-radius:18px;padding:20px}
+.dialog img{width:125px;float:left;margin:0 15px 10px 0;border-radius:8px}
+.close{float:right}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.poster{height:190px}header{padding:13px}main{padding:12px}.hero{padding:25px 12px}}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">🍿 Quel film ce soir ?</div>
+<button onclick="showFav()">♡ Favoris <span id="count">0</span></button>
+</header>
+<main id="home">
+<div class="hero">
+<div class="goldtext">✦ TON CINÉMA À LA MAISON ✦</div>
+<h1>Ce soir,<br><span class="goldtext">on regarde quoi ?</span></h1>
+<p>Choisis ton ambiance et découvre ta prochaine séance.</p>
+<button class="gold" onclick="randomFilm()">🎲 Surprends-moi</button>
+</div>
+<div class="panel">
+<label>1. QUEL GENRE ?</label>
+<div class="chips" id="genres"></div>
+<label>2. QUELLE ÉPOQUE ?</label>
+<div class="chips" id="eras">
+<button class="chip active" data-era="all">Peu importe</button>
+<button class="chip" data-era="recent">Récent (2020+)</button>
+<button class="chip" data-era="old">Plus ancien</button>
+</div>
+<label>3. RECHERCHER UN FILM</label>
+<div class="search">
+<input id="search" placeholder="Nom du film..." oninput="render()">
+<button class="gold" onclick="render()">Chercher</button>
+</div>
+</div>
+<h2 id="heading">🎬 Notre sélection</h2>
+<p id="sub">Des affiches, des notes et des résumés pour choisir.</p>
+<div class="grid" id="movies"></div>
+</main>
+<main id="favorites" style="display:none">
+<button onclick="showHome()">← Retour</button>
+<h1>♡ Mes favoris</h1>
+<div class="grid" id="favMovies"></div>
+</main>
+<div class="modal" id="modal" onclick="if(event.target===this)closeFilm()">
+<div class="dialog">
+<button class="close" onclick="closeFilm()">✕</button>
+<h2 id="detailTitle"></h2>
+<img id="detailPoster" alt="Affiche du film">
+<p class="goldtext" id="detailMeta"></p>
+<p id="detailSummary"></p>
+<p id="detailFacts"></p>
+<button class="gold" id="detailFav">♡ Ajouter aux favoris</button>
+<div style="clear:both"></div>
+</div>
+</div>
+<footer>🍿 Quel film ce soir ? — Ta soirée cinéma commence ici.</footer>
+<script>
+
+const films = [
+{t:"Interstellar",y:2014,g:"Science-fiction",n:8.7,d:"2 h 49",r:"Christopher Nolan",p:"gEU2QniE6E77NI6lCU6MxlNBvIx",s:"Un pilote part dans l'espace à la recherche d'un nouvel avenir pour l'humanité."},
+{t:"Inception",y:2010,g:"Science-fiction",n:8.8,d:"2 h 28",r:"Christopher Nolan",p:"oYuLEt3zVCKq57qu2F8dT7NIa6f",s:"Un voleur capable d'entrer dans les rêves reçoit une mission presque impossible."},
+{t:"The Batman",y:2022,g:"Action",n:7.8,d:"2 h 56",r:"Matt Reeves",p:"74xTEgt7R36Fpooo50r9T25onhq",s:"Batman enquête sur des crimes mystérieux dans Gotham City."},
+{t:"Dune : Deuxième partie",y:2024,g:"Science-fiction",n:8.5,d:"2 h 46",r:"Denis Villeneuve",p:"1pdfLvkbY9ohJlCjQH2CZjjYVvJ",s:"Paul rejoint les Fremen sur Arrakis et affronte son destin."},
+{t:"Spider-Man : Across the Spider-Verse",y:2023,g:"Animation",n:8.6,d:"2 h 20",r:"Joaquim Dos Santos",p:"8Vt6mWEReuy4Of61Lnj5Xj704m8",s:"Miles Morales découvre un multivers rempli de Spider-Man."},
+{t:"Deadpool & Wolverine",y:2024,g:"Action",n:7.6,d:"2 h 08",r:"Shawn Levy",p:"8cdWjvZQUExUUTzyp4t6EDMubfO",s:"Deadpool et Wolverine se retrouvent embarqués dans une mission complètement folle."},
+{t:"Le Chat Potté 2",y:2022,g:"Animation",n:7.8,d:"1 h 42",r:"Joel Crawford",p:"kuf6dutpsT0vSVehic3EZIqkOBt",s:"Le Chat Potté part à la recherche d'une étoile magique pour retrouver ses vies."},
+{t:"La La Land",y:2016,g:"Romance",n:8.0,d:"2 h 08",r:"Damien Chazelle",p:"uDO8zWDhfWwoFdKS4fzkUJt0Rf0",s:"À Los Angeles, une actrice et un musicien poursuivent leurs rêves."},
+{t:"Titanic",y:1997,g:"Romance",n:7.9,d:"3 h 14",r:"James Cameron",p:"9xjZS2rlVxm8SFx8kPC3aIGCOYQ",s:"À bord du Titanic, Jack et Rose vivent une histoire d'amour inoubliable."},
+{t:"Retour vers le futur",y:1985,g:"Comédie",n:8.5,d:"1 h 56",r:"Robert Zemeckis",p:"fNOH9f1aA7XRTzl1sAOx9iF553Q",s:"Marty voyage dans le temps et risque de changer son propre avenir."},
+{t:"Jurassic Park",y:1993,g:"Aventure",n:8.2,d:"2 h 07",r:"Steven Spielberg",p:"b1xCNnyrPebIc7EWNZIa6jhb1Ww",s:"Un parc de dinosaures devient dangereux après une panne."},
+{t:"Harry Potter à l'école des sorciers",y:2001,g:"Fantastique",n:7.6,d:"2 h 32",r:"Chris Columbus",p:"wuMc08IPKEatf9rnMNXvIDxqP4W",s:"Harry découvre la magie et rejoint la célèbre école de Poudlard."},
+{t:"Le Seigneur des anneaux",y:2001,g:"Fantastique",n:8.8,d:"2 h 58",r:"Peter Jackson",p:"6oom5QYQ2yQTMJIbnvbkBL9cHo6",s:"Un jeune Hobbit part dans une quête pour détruire un anneau maléfique."},
+{t:"Scream",y:1996,g:"Horreur",n:7.4,d:"1 h 51",r:"Wes Craven",p:"3O3klyyYpAZBBE4n7IngzTomEDU",s:"Un mystérieux tueur masqué terrorise une petite ville."},
+{t:"Sans un bruit",y:2018,g:"Horreur",n:7.5,d:"1 h 30",r:"John Krasinski",p:"nAU74GmpUk7t5iklEp3bufwDq4n",s:"Une famille tente de survivre dans un monde où le moindre bruit est dangereux."},
+{t:"À couteaux tirés",y:2019,g:"Mystère",n:7.9,d:"2 h 10",r:"Rian Johnson",p:"pThyQovXQrw2m0s9x82twj48Jq4",s:"Un détective enquête sur la mort mystérieuse d'un célèbre auteur."},
+{t:"Top Gun : Maverick",y:2022,g:"Action",n:8.2,d:"2 h 10",r:"Joseph Kosinski",p:"62HCnUTziyWcpDaBO2i1DX17ljH",s:"Un pilote d'exception forme une nouvelle équipe pour une mission risquée."},
+{t:"Le Monde de Nemo",y:2003,g:"Animation",n:8.2,d:"1 h 40",r:"Andrew Stanton",p:"eHuGQ10FUzK1mdOY69wF5pGgEf5",s:"Un poisson traverse l'océan pour retrouver son fils disparu."},
+{t:"Vice-Versa 2",y:2024,g:"Animation",n:7.6,d:"1 h 36",r:"Kelsey Mann",p:"vpn4t3P5kq4vQ5vY5b3k6Yf0K9x",s:"De nouvelles émotions bouleversent la vie de Riley."},
+{t:"Le Roi Lion",y:1994,g:"Aventure",n:8.5,d:"1 h 28",r:"Roger Allers",p:"sKCr78MXSLixwmZ8DyJLrpMsd15",s:"Simba doit trouver le courage de reprendre sa place dans la savane."}
+];
+
+const genres=["Tous","Action","Aventure","Comédie","Fantastique","Horreur","Mystère","Romance","Science-fiction","Animation"];
+let genre="Tous",era="all",current=null;
+let fav=new Set(JSON.parse(localStorage.getItem("filmFavs")||"[]"));
+const $=id=>document.getElementById(id);
+const poster=m=>"https://image.tmdb.org/t/p/w500/"+m.p;
+
+$("genres").innerHTML=genres.map(g=>`<button class="chip ${g===genre?"active":""}" data-g="${g}">${g}</button>`).join("");
+
+$("genres").onclick=e=>{
+const b=e.target.closest("[data-g]");if(!b)return;
+genre=b.dataset.g;
+document.querySelectorAll("[data-g]").forEach(x=>x.classList.toggle("active",x===b));
+render();
+};
+$("eras").onclick=e=>{
+const b=e.target.closest("[data-era]");if(!b)return;
+era=b.dataset.era;
+document.querySelectorAll("[data-era]").forEach(x=>x.classList.toggle("active",x===b));
+render();
+};
+
+function matches(m){
+const q=$("search").value.toLowerCase().trim();
+return (genre==="Tous"||m.g===genre)
+&&(era==="all"||(era==="recent"?m.y>=2020:m.y<2020))
+&&(!q||(m.t+" "+m.s+" "+m.g).toLowerCase().includes(q));
+}
+
+function card(m){
+return `<article class="movie">
+<div class="poster">
+<img src="${poster(m)}" alt="Affiche de ${m.t}" onerror="this.style.display='none'">
+<span class="score">★ ${m.n}/10</span>
+<button class="heart" onclick="toggleFav(${m.id})">${fav.has(m.t)?"♥":"♡"}</button>
+</div>
+<div class="info">
+<h3>${m.t}</h3><div class="meta">${m.y} · ${m.g}</div>
+<p class="summary">${m.s}</p>
+<button onclick="details('${m.t.replace(/'/g,"\\'")}')">Voir la fiche →</button>
+</div></article>`;
+}
+
+function render(){
+const list=films.filter(matches);
+$("movies").innerHTML=list.length?list.map(card).join(""):'<div class="empty">Aucun film trouvé. Essaie un autre choix 🍿</div>';
+$("heading").textContent=list.length?list.length+" films pour toi":"Aucun résultat";
+$("sub").textContent="Sélectionne un film pour découvrir sa fiche.";
+$("count").textContent=fav.size;
+}
+
+function toggleFav(title){
+if(fav.has(title))fav.delete(title);else fav.add(title);
+localStorage.setItem("filmFavs",JSON.stringify([...fav]));
+render();if($("favorites").style.display!=="none")showFav();
+}
+
+function details(title){
+current=films.find(m=>m.t===title);if(!current)return;
+$("detailTitle").textContent=current.t;
+$("detailPoster").src=poster(current);
+$("detailMeta").textContent=current.y+" · "+current.g+" · ★ "+current.n+"/10";
+$("detailSummary").textContent=current.s;
+$("detailFacts").textContent="Durée : "+current.d+" | Réalisateur : "+current.r;
+$("detailFav").textContent=fav.has(current.t)?"♥ Retirer des favoris":"♡ Ajouter aux favoris";
+$("detailFav").onclick=()=>{toggleFav(current.t);$("detailFav").textContent=fav.has(current.t)?"♥ Retirer des favoris":"♡ Ajouter aux favoris";};
+$("modal").classList.add("show");
+}
+function closeFilm(){$("modal").classList.remove("show")}
+function randomFilm(){
+const list=films.filter(matches);
+const m=list.length?list[Math.floor(Math.random()*list.length)]:films[Math.floor(Math.random()*films.length)];
+details(m.t);
+}
+function showFav(){
+$("home").style.display="none";$("favorites").style.display="block";
+const list=films.filter(m=>fav.has(m.t));
+$("favMovies").innerHTML=list.length?list.map(card).join(""):'<div class="empty">Tes favoris apparaîtront ici. Clique sur ♡ sur un film !</div>';
+$("count").textContent=fav.size;window.scrollTo(0,0);
+}
+function showHome(){
+$("favorites").style.display="none";$("home").style.display="block";
+window.scrollTo(0,0);render();
+}
+render();
+</script>
+</body>
+</html>
+
+
